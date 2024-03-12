@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deshboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet"/>
+    <style>
+        *{
+            scrollbar-width: none;
+        }
+        *::-webkit-scrollbar{
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="main" class="w-full h-screen flex">
+        <div class="left w-[25%] border-r">
+            <div class="left-top w-full h-[10vh] flex justify-between items-center bg-[#e3e3e3] border-b px-5">
+                <div class="profile-pic flex items-center gap-3">
+                    <img src="../images/<%= user.profileImage %>" class="w-[50px] h-[50px] object-cover object-top rounded-full border" alt="">
+                    <h1 class="font-medium"><%=user.username%></h1>
+                </div>
+                <button><i class="ri-add-line text-2xl"></i></button>
+            </div>
+            <div class="left-bottom w-full h-[90vh] overflow-y-auto">
+                <!-- // user create  -->
+                
+                
+                
+            </div>
+            
+        </div>
+        <div class="right w-[75%] h-full hidden" onclick="">
+                <div class="right-top w-full h-[10vh] flex justify-between items-center bg-[#e3e3e3] px-5 border-b">
+                    <div class="profile-pic flex items-center gap-3">
+                        <img id="picture" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="right-pic w-[50px] h-[50px] rounded-full border border-[#c7c7c7] flex-shrink-0 cursor-pointer" alt="">
+                        <div class="w-full cursor-pointer">
+                            <h1 id="chat-username" class="right-username font-medium leading-[1.2]">Username</h1>
+                            <h1 class="w-[100%] line-clamp-1 text-slate-500 text-sm leading-[1.2]">active</h1>
+                        </div>
+                    </div>
+                </div>
+                <div class="right-center gap-[6px] w-full h-[82vh] border-b p-3 flex flex-col justify-start items-start overflow-y-auto">
+                    <!-- // message /send -->
+                    
+                    <!-- // message /recieve -->
+                    
+                    
+                    
+                </div>
+                <div class="right-top w-full h-[8vh] flex justify-between items-center gap-4 bg-[#e3e3e3] px-5 border-b">
+                    <input id="input" type="text" placeholder="Send Message" class="w-full border border-black py-2 px-3 rounded outline-none font-mono" style="background: none;">
+                    <button onclick="Message()" class="bg-black w-20 py-2 rounded text-white">Send</button>
+                </div>
+                
+        </div>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io()
+        const currentUserId = "<%= user._id%>"
+        let chatUserId = null;
+        socket.emit("join-user",currentUserId)
+        
+        const message = document.querySelector("#input")
+        function Message(){
+            if(message.value != ""){
+                const data = {
+                    message:message.value,
+                    senderid:currentUserId,
+                    receiverid:chatUserId
+                }
+                sendMessage(message.value)
+                socket.emit("send-message",data)
+                message.value = ""
+            }
+        }
+
+        socket.on("receive-message",data=>{
+            receiveMessage(data.message)
+        })
+        socket.on("send-users",users=>{
+            onlineUsers(users.id,users.username,users.picture,users.lastMessage)
+        })
+
+        function onlineUsers(id,username,picture,lastMessage){
+            if(!document.querySelector(`#chat_${id}`)){
+                const template = `<div id="chat_${id}" onclick="chatUser('${id}','${username}','${picture}','${lastMessage}')" class="w-full flex justify-between items-center bg-[#f0f0f0] hover:bg-[#fffafa] px-5 py-2 border-b">
+                    <div class="profile-pic flex items-center gap-3">
+                        <img src="../images/${picture}" class="w-[50px] h-[50px] rounded-full border border-[#c7c7c7] flex-shrink-0 cursor-pointer" alt="">
+                        <div class="w-full cursor-pointer">
+                            <h1 class="font-medium">${username}</h1>
+                            <h1 class="w-[100%] line-clamp-1 text-slate-500 text-sm">${lastMessage}</h1>
+                        </div>
+                    </div>
+                </div>`
+                document.querySelector(".left-bottom").innerHTML += template
+            }
+        }
+
+        function chatUser(id,username,picture,lastMessage){
+            document.querySelector("#picture").setAttribute("src",`../images/${picture}`)
+            document.querySelector("#chat-username").textContent = username
+            document.querySelector(".right").classList.remove("hidden")
+            chatUserId = id
+            socket.emit("get-message",{
+                senderid:currentUserId,
+                receiverid:chatUserId
+            })
+        }
+        socket.on("get-message",allMessage=>{
+            document.querySelector(".right-center").innerHTML = ""
+            allMessage.forEach(message=>{
+                if(message.senderid == currentUserId){
+                    sendMessage(message.message)
+                }else{
+                    receiveMessage(message.message)
+                }
+            })
+        })
+
+        function sendMessage(msg){
+            const template = `<div class="send max-w-[45%] leading-[1] font-sans text-base font-normal p-2 bg-green-800 text-white rounded ml-auto">
+                <span class="text-[15px]">${msg}</span>
+            </div>`
+            document.querySelector(".right-center").innerHTML += template
+        }
+        
+        function receiveMessage(msg){
+            const template = `<div class="recive max-w-[45%] leading-[1] font-sans text-base font-normal p-2 bg-pink-800 text-white rounded">
+                <span class="text-[15px]">${msg}</span>
+            </div>`
+            document.querySelector(".right-center").innerHTML += template
+        }
+        
+    </script>
+</body>
+</html>
